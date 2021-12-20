@@ -5,3 +5,4 @@
 *.pot
 *.pyc
 __pycache__/
+/todo/migrations/
