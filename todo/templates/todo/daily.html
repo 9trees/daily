@@ -1,0 +1,29 @@
+{% extends 'todo/def_temp.html' %}
+
+{% block content %}
+<h1 class="display-4">Add Daily Text</h1>
+<form method="POST">
+  {% csrf_token %}
+  <div class="form-group">
+    <label for="pjtName">Mantra</label>
+    <input type="text" class="form-control" name="p_name" id="pjtName"  placeholder="Enter Mantra.">
+    <small id="spjtname" class="form-text text-muted">So far we have {{ mc }} mantras.</small>
+  </div>
+  <div class="form-group">
+    <label for="authName">Author</label>
+    <input type="text" class="form-control" name="a_name" id="authName"  placeholder="Enter Auth Name.">
+    <small id="sauthName" class="form-text text-muted">So far we have {{ ac }} authors.</small>
+  </div>
+  <div class="form-group">
+    <label for="dec">Quotes</label>
+    <textarea  type="text" class="form-control" id="dec" name="dec" placeholder="Enter Quote."></textarea>
+    <small id="sdec" class="form-text text-muted">So far we have {{ qc }} quotes.</small>
+  </div>
+  <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+<div>
+  {% for msg in messages %}
+      <div class="text-danger font-weight-light">{{msg}}</div>
+  {% endfor %}
+</div>
+{% endblock %}
