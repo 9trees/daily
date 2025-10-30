@@ -1,0 +1,9 @@
+# Minimal, pinned runtime dependencies for this project
+# Python: 3.8.x (from .venv)
+# Django 5.x requires Python >=3.10; stay on the latest 4.2 LTS for Python 3.8
+Django==4.2.25
+# Dev helper, used by scripts/update_db via runscript
+django-extensions==3.2.3
+
+# Optional: Django will pull tzdata on Windows automatically; add explicitly if you prefer pinning
+# tzdata>=2024.1

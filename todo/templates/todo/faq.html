@@ -1,0 +1,43 @@
+{% extends 'todo/def_temp.html' %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+			<div class="col-md-12">
+				<div class="card card-body">
+                    <h1 class="display-4">Add New FAQ</h1>
+                    <form method="POST">
+                      {% csrf_token %}
+                      <div class="form-group">
+                        <label for="question">Question</label>
+                        <textarea  type="text" class="form-control" id="question" name="question" placeholder="Please Enter the Question in Your Mind."></textarea>
+                      </div><br>
+					  <div class="form-group">
+						<label for="sdec">Short Description</label>
+						<input type="text" class="form-control" id="sdec" name="sdec" placeholder="Short Note on Question.">
+					  </div><br>
+                      <button type="submit" class="btn btn-primary">Submit</button>
+                    </form>
+					<h5 class="display-4">Your FAQ's</h5>
+				</div>
+				<div class="card card-body">
+					<table class="table">
+						<tr>
+							<th>Questions</th>
+						</tr>
+
+						{% for pjt in faqs %}
+							<tr>
+								<td>{{pjt.created_at}}</td>
+								<td>{{pjt.question}}</td>
+								<td>{{pjt.short_description}}</td>
+							</tr>
+						{% endfor %}
+
+					</table>
+				</div>
+			</div>
+
+		</div>
+
+{% endblock %}

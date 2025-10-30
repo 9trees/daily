@@ -1,8 +1,32 @@
 .idea/
+.vscode/
+.venv/
+env/
+venv/
 
-### Django ###
+### Python/Django ###
 *.log
 *.pot
 *.pyc
 __pycache__/
-/todo/migrations/
+*.py[cod]
+*$py.class
+
+# Byte-compiled / optimized / DLL files
+*.so
+
+# Django artifacts
+# db.sqlite3
+# media/
+# staticfiles/
+
+# Environment / secrets
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Keep migrations in version control (do NOT ignore)
+# /todo/migrations/  <-- removed on purpose

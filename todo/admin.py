@@ -4,3 +4,4 @@ from .models import *
 admin.site.register(Mantras)
 admin.site.register(Auth_names)
 admin.site.register(Quotes)
+admin.site.register(FaqDb)
