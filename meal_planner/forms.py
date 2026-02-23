@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import MainDish, SideDish, Tag
+from .models import MainDish, Meal, SideDish, Tag
 
 
 class TagForm(forms.ModelForm):
@@ -43,5 +43,18 @@ class SideDishForm(forms.ModelForm):
             "ingredients": forms.Textarea(
                 attrs={"class": "form-control", "rows": 4}
             ),
+            "tags": forms.SelectMultiple(attrs={"class": "form-select"}),
+        }
+
+
+class MealForm(forms.ModelForm):
+    class Meta:
+        model = Meal
+        fields = ["date", "type", "main_dish", "side_dishes", "tags"]
+        widgets = {
+            "date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "type": forms.Select(attrs={"class": "form-select"}),
+            "main_dish": forms.Select(attrs={"class": "form-select"}),
+            "side_dishes": forms.SelectMultiple(attrs={"class": "form-select"}),
             "tags": forms.SelectMultiple(attrs={"class": "form-select"}),
         }

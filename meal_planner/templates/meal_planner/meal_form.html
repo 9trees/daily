@@ -1,0 +1,70 @@
+{% extends 'meal_planner/main.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      {% if mode == 'edit' %}
+        <h2 class="m-0">Edit Meal</h2>
+      {% else %}
+        <h2 class="m-0">Add Meal</h2>
+      {% endif %}
+      <a class="btn btn-outline-secondary btn-sm" href="{{ next }}">Back</a>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ next }}">
+
+          <div class="row g-3">
+            <div class="col-12 col-md-4">
+              <label class="form-label">Date</label>
+              {{ form.date }}
+              {% for e in form.date.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+            </div>
+
+            <div class="col-12 col-md-4">
+              <label class="form-label">Meal Type</label>
+              {{ form.type }}
+              {% for e in form.type.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+            </div>
+
+            <div class="col-12 col-md-4">
+              <label class="form-label">Main Dish</label>
+              {{ form.main_dish }}
+              {% for e in form.main_dish.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+              <div class="form-text">
+                Add dishes in <a href="/mp/main-dishes/">Main Dishes</a>.
+              </div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Side Dishes</label>
+              {{ form.side_dishes }}
+              {% for e in form.side_dishes.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+              <div class="form-text">Hold Ctrl (Windows) / Cmd (Mac) to select multiple.</div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Tags</label>
+              {{ form.tags }}
+              {% for e in form.tags.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+              <div class="form-text">Optional: use tags to group meals (e.g., "High Protein").</div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 mt-4">
+            <button class="btn btn-primary" type="submit">Save</button>
+            <a class="btn btn-outline-secondary" href="{{ next }}">Cancel</a>
+            {% if mode == 'edit' %}
+              <a class="btn btn-outline-danger ms-auto" href="{% url 'meal_delete' meal.id %}?next={{ next|urlencode }}">Remove</a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

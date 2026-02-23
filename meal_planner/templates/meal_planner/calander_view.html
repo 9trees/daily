@@ -39,12 +39,13 @@
 			<h2 class="m-0">{{ current_date|date:'l, M j, Y' }}</h2>
             <a class="btn btn-outline-secondary btn-sm" href="?view=day&date={{ prev_date|date:'Y-m-d' }}">&larr; Prev</a>			
 			<a class="btn btn-outline-secondary btn-sm" href="?view=day&date={{ next_date|date:'Y-m-d' }}">Next &rarr;</a>
+			<a class="btn btn-primary btn-sm ms-2" href="{% url 'meal_add' %}?date={{ current_date|date:'Y-m-d' }}&next={{ return_to|urlencode }}">+ Add meal</a>
 		</div>
 	{% endif %}
 </div>
 
 {% if mode == 'month' %}
-	<table class="table table-bordered align-middle" style="table-layout: fixed;">
+	<table class="table table-sm table-bordered align-middle" style="table-layout: fixed;">
 		<thead class="table-light">
 			<tr>
 				{% for name in weekday_names %}
@@ -57,9 +58,10 @@
 				<tr>
 					{% for day in week %}
 						<td class="p-2 {% if not day.in_month %}text-muted bg-light{% endif %}" style="height: 120px; vertical-align: top;">
-							<div class="d-flex justify-content-between">
-								<span class="fw-semibold {% if day.is_today %}text-primary{% endif %}">{{ day.date.day }}</span>
-							</div>
+								<div class="d-flex justify-content-between align-items-start">
+									<span class="fw-semibold {% if day.is_today %}text-primary{% endif %}">{{ day.date.day }}</span>
+									<a class="btn btn-outline-primary btn-sm py-0 px-2" title="Add meal" href="{% url 'meal_add' %}?date={{ day.date|date:'Y-m-d' }}&next={{ return_to|urlencode }}">+</a>
+								</div>
 
 							{% if day.meals %}
 								<ul class="list-unstyled mt-2 mb-0 small">
@@ -67,6 +69,8 @@
 										<li class="mb-1">
 											<span class="badge text-bg-secondary">{{ meal.type }}</span>
 											<span class="ms-1">{{ meal.main_dish.name }}</span>
+											<a class="ms-2 link-secondary" href="{% url 'meal_edit' meal.id %}?next={{ return_to|urlencode }}">Edit</a>
+											<a class="ms-2 link-danger" href="{% url 'meal_delete' meal.id %}?next={{ return_to|urlencode }}">Remove</a>
 											{% if meal.side_dishes.all %}
 												<div class="text-muted">
 													Sides:
@@ -88,13 +92,18 @@
 		</tbody>
 	</table>
 {% elif mode == 'week' %}
-	<table class="table table-bordered align-middle" style="table-layout: fixed;">
+	<table class="table table-sm table-bordered align-middle" style="table-layout: fixed;">
 		<thead class="table-light">
 			<tr>
 				{% for d in days %}
 					<th class="text-center {% if d.is_today %}text-primary{% endif %}">
-						{{ d.date|date:'D' }}<br>
-						<span class="fw-normal">{{ d.date|date:'M j' }}</span>
+						<div class="d-flex justify-content-center align-items-center gap-2">
+							<div>
+								{{ d.date|date:'D' }}<br>
+								<span class="fw-normal">{{ d.date|date:'M j' }}</span>
+							</div>
+							<a class="btn btn-outline-primary btn-sm py-0 px-2" title="Add meal" href="{% url 'meal_add' %}?date={{ d.date|date:'Y-m-d' }}&next={{ return_to|urlencode }}">+</a>
+						</div>
 					</th>
 				{% endfor %}
 			</tr>
@@ -109,6 +118,8 @@
 									<li class="mb-2">
 										<span class="badge text-bg-secondary">{{ meal.type }}</span>
 										<span class="ms-1">{{ meal.main_dish.name }}</span>
+										<a class="ms-2 link-secondary" href="{% url 'meal_edit' meal.id %}?next={{ return_to|urlencode }}">Edit</a>
+										<a class="ms-2 link-danger" href="{% url 'meal_delete' meal.id %}?next={{ return_to|urlencode }}">Remove</a>
 										{% if meal.side_dishes.all %}
 											<div class="text-muted">
 												Sides:
@@ -135,6 +146,8 @@
 				<li class="list-group-item">
 					<span class="badge text-bg-secondary">{{ meal.type }}</span>
 					<span class="ms-2">{{ meal.main_dish.name }}</span>
+					<a class="ms-2 link-secondary" href="{% url 'meal_edit' meal.id %}?next={{ return_to|urlencode }}">Edit</a>
+					<a class="ms-2 link-danger" href="{% url 'meal_delete' meal.id %}?next={{ return_to|urlencode }}">Remove</a>
 					{% if meal.side_dishes.all %}
 						<div class="text-muted small mt-1">
 							Sides:

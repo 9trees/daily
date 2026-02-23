@@ -1,0 +1,32 @@
+{% extends 'meal_planner/main.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-7">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h2 class="m-0">Remove Meal</h2>
+      <a class="btn btn-outline-secondary btn-sm" href="{{ next }}">Back</a>
+    </div>
+
+    <div class="card border-danger">
+      <div class="card-body">
+        <p class="mb-2">Are you sure you want to remove this meal?</p>
+        <ul class="mb-3">
+          <li><strong>Date:</strong> {{ meal.date }}</li>
+          <li><strong>Type:</strong> {{ meal.type }}</li>
+          <li><strong>Main:</strong> {{ meal.main_dish.name }}</li>
+        </ul>
+
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ next }}">
+          <div class="d-flex gap-2">
+            <button class="btn btn-danger" type="submit">Yes, remove</button>
+            <a class="btn btn-outline-secondary" href="{{ next }}">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
