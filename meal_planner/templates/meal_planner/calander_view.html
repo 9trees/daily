@@ -1,0 +1,153 @@
+{% extends 'meal_planner/main.html' %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+	<div class="btn-group" role="group" aria-label="Calendar view mode">
+		{% if mode == 'month' %}
+			<a class="btn btn-sm btn-primary" href="?view=month&year={{ year }}&month={{ month }}">Month</a>
+		{% else %}
+			<a class="btn btn-sm btn-outline-primary" href="?view=month&year={{ focus_date.year }}&month={{ focus_date.month }}">Month</a>
+		{% endif %}
+
+		{% if mode == 'week' %}
+			<a class="btn btn-sm btn-primary" href="?view=week&date={{ focus_date|date:'Y-m-d' }}">Week</a>
+		{% else %}
+			<a class="btn btn-sm btn-outline-primary" href="?view=week&date={{ focus_date|date:'Y-m-d' }}">Week</a>
+		{% endif %}
+
+		{% if mode == 'day' %}
+			<a class="btn btn-sm btn-primary" href="?view=day&date={{ focus_date|date:'Y-m-d' }}">Day</a>
+		{% else %}
+			<a class="btn btn-sm btn-outline-primary" href="?view=day&date={{ focus_date|date:'Y-m-d' }}">Day</a>
+		{% endif %}
+	</div>
+
+	{% if mode == 'month' %}
+		<div class="d-flex align-items-center gap-2">
+            <h2 class="m-0">{{ month_name }} {{ year }}</h2>
+			<a class="btn btn-outline-secondary btn-sm" href="?view=month&year={{ prev_year }}&month={{ prev_month }}">&larr; Prev</a>			
+			<a class="btn btn-outline-secondary btn-sm" href="?view=month&year={{ next_year }}&month={{ next_month }}">Next &rarr;</a>
+		</div>
+	{% elif mode == 'week' %}
+		<div class="d-flex align-items-center gap-2">
+            <h2 class="m-0">Week of {{ week_start|date:'M j, Y' }}</h2>
+			<a class="btn btn-outline-secondary btn-sm" href="?view=week&date={{ prev_date|date:'Y-m-d' }}">&larr; Prev</a>			
+			<a class="btn btn-outline-secondary btn-sm" href="?view=week&date={{ next_date|date:'Y-m-d' }}">Next &rarr;</a>
+		</div>
+	{% elif mode == 'day' %}
+		<div class="d-flex align-items-center gap-2">
+			<h2 class="m-0">{{ current_date|date:'l, M j, Y' }}</h2>
+            <a class="btn btn-outline-secondary btn-sm" href="?view=day&date={{ prev_date|date:'Y-m-d' }}">&larr; Prev</a>			
+			<a class="btn btn-outline-secondary btn-sm" href="?view=day&date={{ next_date|date:'Y-m-d' }}">Next &rarr;</a>
+		</div>
+	{% endif %}
+</div>
+
+{% if mode == 'month' %}
+	<table class="table table-bordered align-middle" style="table-layout: fixed;">
+		<thead class="table-light">
+			<tr>
+				{% for name in weekday_names %}
+					<th class="text-center">{{ name }}</th>
+				{% endfor %}
+			</tr>
+		</thead>
+		<tbody>
+			{% for week in weeks %}
+				<tr>
+					{% for day in week %}
+						<td class="p-2 {% if not day.in_month %}text-muted bg-light{% endif %}" style="height: 120px; vertical-align: top;">
+							<div class="d-flex justify-content-between">
+								<span class="fw-semibold {% if day.is_today %}text-primary{% endif %}">{{ day.date.day }}</span>
+							</div>
+
+							{% if day.meals %}
+								<ul class="list-unstyled mt-2 mb-0 small">
+									{% for meal in day.meals %}
+										<li class="mb-1">
+											<span class="badge text-bg-secondary">{{ meal.type }}</span>
+											<span class="ms-1">{{ meal.main_dish.name }}</span>
+											{% if meal.side_dishes.all %}
+												<div class="text-muted">
+													Sides:
+													{% for side in meal.side_dishes.all %}
+														{{ side.name }}{% if not forloop.last %}, {% endif %}
+													{% endfor %}
+												</div>
+											{% endif %}
+										</li>
+									{% endfor %}
+								</ul>
+							{% else %}
+								<div class="text-muted small mt-2">No meals</div>
+							{% endif %}
+						</td>
+					{% endfor %}
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+{% elif mode == 'week' %}
+	<table class="table table-bordered align-middle" style="table-layout: fixed;">
+		<thead class="table-light">
+			<tr>
+				{% for d in days %}
+					<th class="text-center {% if d.is_today %}text-primary{% endif %}">
+						{{ d.date|date:'D' }}<br>
+						<span class="fw-normal">{{ d.date|date:'M j' }}</span>
+					</th>
+				{% endfor %}
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				{% for d in days %}
+					<td class="p-2" style="height: 220px; vertical-align: top;">
+						{% if d.meals %}
+							<ul class="list-unstyled mb-0 small">
+								{% for meal in d.meals %}
+									<li class="mb-2">
+										<span class="badge text-bg-secondary">{{ meal.type }}</span>
+										<span class="ms-1">{{ meal.main_dish.name }}</span>
+										{% if meal.side_dishes.all %}
+											<div class="text-muted">
+												Sides:
+												{% for side in meal.side_dishes.all %}
+													{{ side.name }}{% if not forloop.last %}, {% endif %}
+												{% endfor %}
+											</div>
+										{% endif %}
+									</li>
+								{% endfor %}
+							</ul>
+						{% else %}
+							<div class="text-muted small">No meals</div>
+						{% endif %}
+					</td>
+				{% endfor %}
+			</tr>
+		</tbody>
+	</table>
+{% elif mode == 'day' %}
+	{% if meals %}
+		<ul class="list-group">
+			{% for meal in meals %}
+				<li class="list-group-item">
+					<span class="badge text-bg-secondary">{{ meal.type }}</span>
+					<span class="ms-2">{{ meal.main_dish.name }}</span>
+					{% if meal.side_dishes.all %}
+						<div class="text-muted small mt-1">
+							Sides:
+							{% for side in meal.side_dishes.all %}
+								{{ side.name }}{% if not forloop.last %}, {% endif %}
+							{% endfor %}
+						</div>
+					{% endif %}
+				</li>
+			{% endfor %}
+		</ul>
+	{% else %}
+		<div class="text-muted">No meals for this day.</div>
+	{% endif %}
+{% endif %}
+{% endblock %}

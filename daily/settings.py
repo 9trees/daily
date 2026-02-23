@@ -37,6 +37,7 @@ CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_trusted.split(',') if o.strip()
 # Application definition
 
 INSTALLED_APPS = [
+    'meal_planner.apps.MealPlannerConfig',
     'todo.apps.TodoConfig',
     'django_extensions',
     'django.contrib.admin',
