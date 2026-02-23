@@ -49,17 +49,21 @@
             </div>
 
             <div class="col-12">
-              <label class="form-label">Side Dishes</label>
+              <label class="form-label">Side Dishes</label>              
               {{ form.side_dishes }}
               {% for e in form.side_dishes.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-              <div class="form-text">Hold Ctrl (Windows) / Cmd (Mac) to select multiple.</div>
+              <div class="form-text">Hold Ctrl (Windows) / Cmd (Mac) to select multiple.
+                Add dishes in <a href="/mp/side-dishes/">Side Dishes</a>.
+              </div>
             </div>
 
             <div class="col-12">
               <label class="form-label">Tags</label>
               {{ form.tags }}
               {% for e in form.tags.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-              <div class="form-text">Optional: use tags to group meals (e.g., "High Protein").</div>
+              <div class="form-text">Optional: use tags to group meals (e.g., "High Protein").
+                Add tags in <a href="/mp/tags/">Tags</a>.
+              </div>
             </div>
           </div>
 
