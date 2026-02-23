@@ -26,9 +26,17 @@
             </div>
 
             <div class="col-12 col-md-4">
-              <label class="form-label">Meal Type</label>
+              <div class="d-flex align-items-center justify-content-between">
+                <label class="form-label mb-0">Meal Type</label>
+                {% if mode == 'add' %}
+                  <a class="small" href="{% url 'meal_add' %}?date={{ form.date.value|default:'' }}&auto=1&next={{ next|urlencode }}">Auto-pick</a>
+                {% endif %}
+              </div>
               {{ form.type }}
               {% for e in form.type.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+              {% if mode == 'add' and auto and suggested_type %}
+                <div class="form-text">Suggested: {{ suggested_type }}</div>
+              {% endif %}
             </div>
 
             <div class="col-12 col-md-4">

@@ -164,6 +164,22 @@ def _next_url(request):
     return request.POST.get("next") or request.GET.get("next") or reverse("calendar")
 
 
+def _suggest_next_meal_type(meal_date: date) -> str:
+    """Suggest the next meal type for a date based on what's already planned."""
+
+    from .models import Meal
+
+    preferred_order = ["Breakfast", "Lunch", "Dinner"]
+    existing = set(
+        Meal.objects.filter(date=meal_date, is_plan=True).values_list("type", flat=True)
+    )
+
+    for t in preferred_order:
+        if t not in existing:
+            return t
+    return "Dinner"
+
+
 def meal_add(request):
     from .forms import MealForm
 
@@ -178,6 +194,7 @@ def meal_add(request):
         except (ValueError, TypeError):
             initial_date = today
 
+    auto = request.GET.get("auto") == "1"
     if request.method == "POST":
         form = MealForm(request.POST)
         if form.is_valid():
@@ -187,7 +204,11 @@ def meal_add(request):
             form.save_m2m()
             return redirect(_next_url(request))
     else:
-        form = MealForm(initial={"date": initial_date})
+        initial = {"date": initial_date}
+        suggested_type = _suggest_next_meal_type(initial_date)
+        if auto:
+            initial["type"] = suggested_type
+        form = MealForm(initial=initial)
 
     return render(
         request,
@@ -196,6 +217,8 @@ def meal_add(request):
             "mode": "add",
             "form": form,
             "next": _next_url(request),
+            "auto": auto,
+            "suggested_type": _suggest_next_meal_type(initial_date),
         },
     )
 
