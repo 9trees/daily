@@ -1,0 +1,64 @@
+{% extends 'meal_planner/main.html' %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-12 col-lg-7">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <h2 class="m-0">Tags</h2>
+      <span class="text-muted">{{ tags|length }} total</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th style="width: 30%">Name</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tag in tags %}
+            <tr>
+              <td class="fw-semibold">{{ tag.name }}</td>
+              <td class="text-muted">{{ tag.description }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="2" class="text-muted">No tags yet.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Add Tag</h5>
+        <form method="post" class="mt-3">
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label">Name</label>
+            {{ form.name }}
+            {% for e in form.name.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            {{ form.description }}
+            {% for e in form.description.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+          </div>
+
+          <button class="btn btn-primary" type="submit">Add</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="alert alert-info mt-3 mb-0">
+      Tip: Create tags first, then assign them to dishes.
+    </div>
+  </div>
+</div>
+{% endblock %}

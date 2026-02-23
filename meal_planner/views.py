@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 
 from django.shortcuts import render
+from django.shortcuts import redirect
 from django.utils import timezone
 
 # Create your views here.
@@ -151,3 +152,72 @@ def calendar_view(request):
         'next_month': next_month,
     }
     return render(request, 'meal_planner/calander_view.html', context)
+
+
+def tags_view(request):
+    from .forms import TagForm
+    from .models import Tag
+
+    if request.method == "POST":
+        form = TagForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("tags")
+    else:
+        form = TagForm()
+
+    tags = Tag.objects.order_by("name")
+    return render(
+        request,
+        "meal_planner/tags.html",
+        {
+            "tags": tags,
+            "form": form,
+        },
+    )
+
+
+def main_dishes_view(request):
+    from .forms import MainDishForm
+    from .models import MainDish
+
+    if request.method == "POST":
+        form = MainDishForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("main_dishes")
+    else:
+        form = MainDishForm()
+
+    dishes = MainDish.objects.prefetch_related("tags").order_by("name")
+    return render(
+        request,
+        "meal_planner/main_dishes.html",
+        {
+            "dishes": dishes,
+            "form": form,
+        },
+    )
+
+
+def side_dishes_view(request):
+    from .forms import SideDishForm
+    from .models import SideDish
+
+    if request.method == "POST":
+        form = SideDishForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("side_dishes")
+    else:
+        form = SideDishForm()
+
+    dishes = SideDish.objects.prefetch_related("tags").order_by("name")
+    return render(
+        request,
+        "meal_planner/side_dishes.html",
+        {
+            "dishes": dishes,
+            "form": form,
+        },
+    )
