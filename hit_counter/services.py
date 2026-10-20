@@ -1,15 +1,8 @@
 import ipaddress
 import logging
-import sys
 from datetime import datetime, time, timedelta
 from typing import Dict
 
-if sys.version_info >= (3, 9):
-    from zoneinfo import ZoneInfo
-else:
-    from backports.zoneinfo import ZoneInfo
-
-from django.conf import settings
 from django.db.models import Count, Q
 from django.http import HttpRequest
 from django.utils import timezone
@@ -17,15 +10,15 @@ from geoip2.database import Reader
 from geoip2.errors import AddressNotFoundError
 from maxminddb.errors import InvalidDatabaseError
 
-from .models import Hit, Page
+from .models import CounterSettings, Hit, Page, ZoneInfo
 
 
 logger = logging.getLogger(__name__)
 
 
-def client_ip(request: HttpRequest) -> str:
+def client_ip(request: HttpRequest, config: CounterSettings) -> str:
     address = str(ipaddress.ip_address(request.META.get('REMOTE_ADDR', '')))
-    if address in settings.HIT_COUNTER_TRUSTED_PROXY_IPS:
+    if address in config.proxy_ip_list:
         forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
         if forwarded:
             # The trusted immediate proxy must append the actual peer address.
@@ -33,8 +26,8 @@ def client_ip(request: HttpRequest) -> str:
     return address
 
 
-def location_for(address: str) -> Dict[str, str]:
-    path = settings.HIT_COUNTER_GEOIP_PATH
+def location_for(address: str, config: CounterSettings) -> Dict[str, str]:
+    path = config.geoip_path.strip()
     if not path:
         return {'location_status': Hit.LocationStatus.NOT_CONFIGURED}
     try:
@@ -53,8 +46,8 @@ def location_for(address: str) -> Dict[str, str]:
         return {'location_status': Hit.LocationStatus.LOOKUP_FAILED}
 
 
-def counts_for(page: Page) -> dict:
-    zone = ZoneInfo(settings.HIT_COUNTER_TIME_ZONE)
+def counts_for(page: Page, config: CounterSettings) -> dict:
+    zone = ZoneInfo(config.time_zone)
     today = timezone.now().astimezone(zone).date()
     start = datetime.combine(today, time.min, tzinfo=zone)
     end = datetime.combine(today + timedelta(days=1), time.min, tzinfo=zone)
@@ -66,5 +59,5 @@ def counts_for(page: Page) -> dict:
         'page': page.code,
         **counts,
         'date': today.isoformat(),
-        'timezone': settings.HIT_COUNTER_TIME_ZONE,
+        'timezone': config.time_zone,
     }

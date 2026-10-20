@@ -2,11 +2,10 @@ import json
 import re
 from functools import wraps
 
-from django.conf import settings
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from .models import Hit, Page
+from .models import CounterSettings, Hit, Page
 from .services import client_ip, counts_for, location_for
 
 
@@ -19,8 +18,10 @@ def public_endpoint(method):
         @csrf_exempt
         @wraps(view)
         def wrapped(request: HttpRequest, *args, **kwargs) -> HttpResponse:
+            config = CounterSettings.load()
+            allowed_origins = config.origin_list
             origin = request.headers.get('Origin')
-            if origin and origin not in settings.HIT_COUNTER_ALLOWED_ORIGINS:
+            if origin and origin not in allowed_origins:
                 response = error('Origin is not allowed.', 403)
             elif request.method == 'OPTIONS':
                 requested_method = request.headers.get('Access-Control-Request-Method')
@@ -39,11 +40,11 @@ def public_endpoint(method):
             elif request.method != method:
                 response = error('Method is not allowed.', 405)
             else:
-                response = view(request, *args, **kwargs)
+                response = view(request, config, *args, **kwargs)
             response['Allow'] = '{}, OPTIONS'.format(method)
             response['Cache-Control'] = 'no-store'
             response['Vary'] = 'Origin'
-            if origin in settings.HIT_COUNTER_ALLOWED_ORIGINS:
+            if origin in allowed_origins:
                 response['Access-Control-Allow-Origin'] = origin
                 response['Access-Control-Allow-Methods'] = '{}, OPTIONS'.format(method)
                 response['Access-Control-Allow-Headers'] = 'Content-Type'
@@ -53,7 +54,7 @@ def public_endpoint(method):
 
 
 @public_endpoint('POST')
-def log_hit(request: HttpRequest) -> JsonResponse:
+def log_hit(request: HttpRequest, config: CounterSettings) -> JsonResponse:
     if request.content_type != 'application/json':
         return error('Content-Type must be application/json.', 415)
     body = request.read(1025)
@@ -74,20 +75,20 @@ def log_hit(request: HttpRequest) -> JsonResponse:
     if page is None:
         return error('Page not found or inactive.', 404)
     try:
-        address = client_ip(request)
+        address = client_ip(request, config)
     except ValueError:
         return error('A valid client IP address is required.', 400)
-    hit = Hit.objects.create(page=page, ip_address=address, **location_for(address))
+    hit = Hit.objects.create(page=page, ip_address=address, **location_for(address, config))
     return JsonResponse({
-        **counts_for(page),
+        **counts_for(page, config),
         'logged_at': hit.created_at.isoformat(),
         'location_status': hit.location_status,
     }, status=201)
 
 
 @public_endpoint('GET')
-def hit_count(request: HttpRequest, code: str) -> JsonResponse:
+def hit_count(request: HttpRequest, config: CounterSettings, code: str) -> JsonResponse:
     page = Page.objects.filter(code=code, is_active=True).first()
     if page is None:
         return error('Page not found or inactive.', 404)
-    return JsonResponse(counts_for(page))
+    return JsonResponse(counts_for(page, config))

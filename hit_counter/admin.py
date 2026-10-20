@@ -1,6 +1,28 @@
 from django.contrib import admin
+from django.shortcuts import redirect
+from django.urls import reverse
 
-from .models import Hit, Page
+from .models import CounterSettings, Hit, Page
+
+
+@admin.register(CounterSettings)
+class CounterSettingsAdmin(admin.ModelAdmin):
+    fieldsets = (
+        ('Browser access', {'fields': ('allowed_origins',)}),
+        ('Daily counts', {'fields': ('time_zone',)}),
+        ('Visitor IP and location', {'fields': ('trusted_proxy_ips', 'geoip_path')}),
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        # There is only one settings row, so open it directly.
+        CounterSettings.objects.get_or_create(pk=1)
+        return redirect(reverse('admin:hit_counter_countersettings_change', args=[1]))
 
 
 @admin.register(Page)

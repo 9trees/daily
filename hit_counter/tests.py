@@ -4,20 +4,24 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import Client, RequestFactory, TestCase, override_settings
+from django.test import Client, RequestFactory, TestCase
+from django.core.exceptions import ValidationError
 from geoip2.errors import AddressNotFoundError
 from maxminddb.errors import InvalidDatabaseError
 
-from .models import Hit, Page
+from .models import CounterSettings, Hit, Page
 from .services import client_ip, location_for
 
 
-@override_settings(
-    HIT_COUNTER_ALLOWED_ORIGINS=['https://9trees.github.io'],
-    HIT_COUNTER_TIME_ZONE='UTC',
-    HIT_COUNTER_GEOIP_PATH='',
-    HIT_COUNTER_TRUSTED_PROXY_IPS=[],
-)
+def configure(**fields):
+    config = CounterSettings.load()
+    for name, value in fields.items():
+        setattr(config, name, value)
+    config.full_clean()
+    config.save()
+    return config
+
+
 class HitCounterTests(TestCase):
     def setUp(self):
         self.page = Page.objects.create(code='github-home', name='GitHub home')
@@ -86,9 +90,9 @@ class HitCounterTests(TestCase):
             'date': '2026-10-20', 'timezone': 'UTC',
         })
 
-    @override_settings(HIT_COUNTER_TIME_ZONE='America/New_York')
     @patch('hit_counter.services.timezone.now')
     def test_configured_timezone_handles_daylight_saving_boundary(self, now):
+        configure(time_zone='America/New_York')
         now.return_value = datetime(2026, 11, 1, 18, tzinfo=timezone.utc)
         # November 1 is a 25-hour local day in New York.
         for hour, day in ((3, 1), (4, 1), (4, 2), (5, 2)):
@@ -179,8 +183,8 @@ class HitCounterTests(TestCase):
         self.log(REMOTE_ADDR='192.0.2.1', HTTP_X_FORWARDED_FOR='198.51.100.1')
         self.assertEqual(Hit.objects.get().ip_address, '192.0.2.1')
 
-    @override_settings(HIT_COUNTER_TRUSTED_PROXY_IPS=['127.0.0.1'])
     def test_trusted_proxy_uses_last_address_not_spoofed_first_address(self):
+        configure(trusted_proxy_ips='127.0.0.1')
         self.log(HTTP_X_FORWARDED_FOR='198.51.100.1, 2001:db8::1')
         self.assertEqual(Hit.objects.get().ip_address, '2001:db8::1')
 
@@ -188,15 +192,15 @@ class HitCounterTests(TestCase):
         self.assertEqual(self.log(REMOTE_ADDR='invalid').status_code, 400)
         self.assertFalse(Hit.objects.exists())
 
-    @override_settings(HIT_COUNTER_TRUSTED_PROXY_IPS=['127.0.0.1'])
     def test_invalid_forwarded_address_is_rejected(self):
+        configure(trusted_proxy_ips='127.0.0.1')
         self.assertEqual(self.log(HTTP_X_FORWARDED_FOR='invalid').status_code, 400)
         self.assertFalse(Hit.objects.exists())
 
-    @override_settings(HIT_COUNTER_TRUSTED_PROXY_IPS=['127.0.0.1'])
     def test_trusted_proxy_without_forwarded_header_uses_peer(self):
+        config = configure(trusted_proxy_ips='127.0.0.1')
         request = RequestFactory().get('/', REMOTE_ADDR='127.0.0.1')
-        self.assertEqual(client_ip(request), '127.0.0.1')
+        self.assertEqual(client_ip(request, config), '127.0.0.1')
 
     @patch('hit_counter.views.location_for')
     def test_location_is_stored_but_never_returned(self, locate):
@@ -205,7 +209,8 @@ class HitCounterTests(TestCase):
             'city': 'Example city', 'location_status': Hit.LocationStatus.FOUND,
         }
         response = self.log(REMOTE_ADDR='192.0.2.1')
-        locate.assert_called_once_with('192.0.2.1')
+        locate.assert_called_once()
+        self.assertEqual(locate.call_args.args[0], '192.0.2.1')
         hit = Hit.objects.get()
         self.assertEqual(hit.city, 'Example city')
         self.assertEqual(hit.country, 'Example country')
@@ -213,8 +218,8 @@ class HitCounterTests(TestCase):
         self.assertEqual(response.json()['location_status'], 'found')
         self.assertNotIn('Example city', response.content.decode())
 
-    @override_settings(HIT_COUNTER_GEOIP_PATH='missing.mmdb')
     def test_broken_geoip_database_logs_error_and_hit_still_succeeds(self):
+        configure(geoip_path='missing.mmdb')
         with self.assertLogs('hit_counter.services', level='ERROR'):
             response = self.log()
         self.assertEqual(response.status_code, 201)
@@ -237,9 +242,76 @@ class HitCounterTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'name="_save"')
 
+    def test_settings_admin_opens_single_editable_record(self):
+        user = get_user_model().objects.create_superuser('owner', 'owner@example.com', 'test-password')
+        self.client = Client()
+        self.client.force_login(user)
+        response = self.client.get('/admin/hit_counter/countersettings/')
+        self.assertRedirects(response, '/admin/hit_counter/countersettings/1/change/')
+        self.assertEqual(CounterSettings.objects.count(), 1)
+        self.assertEqual(self.client.get('/admin/hit_counter/countersettings/add/').status_code, 403)
+        self.assertEqual(
+            self.client.get('/admin/hit_counter/countersettings/1/delete/').status_code, 403,
+        )
+        response = self.client.post('/admin/hit_counter/countersettings/1/change/', {
+            'allowed_origins': 'https://9trees.github.io\r\nhttps://forms.example.com',
+            'time_zone': 'Asia/Kolkata',
+            'trusted_proxy_ips': '10.0.0.1',
+            'geoip_path': '',
+        })
+        self.assertEqual(response.status_code, 302)
+        config = CounterSettings.load()
+        self.assertEqual(config.origin_list, ['https://9trees.github.io', 'https://forms.example.com'])
+        self.assertEqual(config.time_zone, 'Asia/Kolkata')
 
-@override_settings(HIT_COUNTER_GEOIP_PATH='city.mmdb')
+    def test_admin_changes_apply_to_api_without_restart(self):
+        configure(allowed_origins='https://forms.example.com')
+        self.assertEqual(self.log(**self.origin).status_code, 403)
+        response = self.log(HTTP_ORIGIN='https://forms.example.com')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response['Access-Control-Allow-Origin'], 'https://forms.example.com')
+
+    def test_defaults_apply_before_settings_are_saved(self):
+        self.assertFalse(CounterSettings.objects.exists())
+        config = CounterSettings.load()
+        self.assertEqual(config.origin_list, ['https://9trees.github.io'])
+        self.assertEqual(config.time_zone, 'UTC')
+        self.assertEqual(config.proxy_ip_list, [])
+        self.assertEqual(config.geoip_path, '')
+
+
+class CounterSettingsValidationTests(TestCase):
+    def test_rejects_invalid_values(self):
+        for field, value in (
+            ('allowed_origins', 'https://9trees.github.io/'),
+            ('allowed_origins', 'https://9trees.github.io/repo'),
+            ('allowed_origins', '9trees.github.io'),
+            ('allowed_origins', 'ftp://9trees.github.io'),
+            ('time_zone', 'Not/AZone'),
+            ('time_zone', ''),
+            ('trusted_proxy_ips', '10.0.0.300'),
+        ):
+            with self.subTest(field=field, value=value):
+                config = CounterSettings(**{field: value})
+                with self.assertRaises(ValidationError) as caught:
+                    config.full_clean()
+                self.assertIn(field, caught.exception.message_dict)
+
+    def test_accepts_valid_values_and_saves_as_singleton(self):
+        config = CounterSettings(
+            allowed_origins='https://9trees.github.io\nhttp://localhost:8000',
+            time_zone='Europe/London', trusted_proxy_ips='10.0.0.1\n2001:db8::1',
+        )
+        config.full_clean()
+        config.save()
+        CounterSettings(time_zone='UTC').save()
+        self.assertEqual(CounterSettings.objects.count(), 1)
+        self.assertEqual(CounterSettings.load().time_zone, 'UTC')
+
+
 class LocalLocationTests(TestCase):
+    def setUp(self):
+        self.config = CounterSettings(geoip_path='city.mmdb')
     @patch('hit_counter.services.Reader')
     def test_local_database_result(self, reader):
         reader.return_value.__enter__.return_value.city.return_value = SimpleNamespace(
@@ -247,7 +319,7 @@ class LocalLocationTests(TestCase):
             subdivisions=SimpleNamespace(most_specific=SimpleNamespace(name='Region')),
             city=SimpleNamespace(name='City'),
         )
-        self.assertEqual(location_for('192.0.2.1'), {
+        self.assertEqual(location_for('192.0.2.1', self.config), {
             'country': 'Country', 'region': 'Region', 'city': 'City',
             'location_status': 'found',
         })
@@ -262,23 +334,23 @@ class LocalLocationTests(TestCase):
             subdivisions=SimpleNamespace(most_specific=SimpleNamespace(name=None)),
             city=SimpleNamespace(name=None),
         )
-        self.assertEqual(location_for('192.0.2.1'), {
+        self.assertEqual(location_for('192.0.2.1', self.config), {
             'country': '', 'region': '', 'city': '', 'location_status': 'found',
         })
 
     @patch('hit_counter.services.Reader')
     def test_ip_not_found(self, reader):
         reader.return_value.__enter__.return_value.city.side_effect = AddressNotFoundError('Not found')
-        self.assertEqual(location_for('192.0.2.1'), {'location_status': 'not_found'})
+        self.assertEqual(location_for('192.0.2.1', self.config), {'location_status': 'not_found'})
 
     @patch('hit_counter.services.Reader')
     def test_invalid_database_is_explicitly_logged(self, reader):
         reader.side_effect = InvalidDatabaseError('Invalid database')
         with self.assertLogs('hit_counter.services', level='ERROR'):
-            self.assertEqual(location_for('192.0.2.1'), {'location_status': 'lookup_failed'})
+            self.assertEqual(location_for('192.0.2.1', self.config), {'location_status': 'lookup_failed'})
 
-    @override_settings(HIT_COUNTER_GEOIP_PATH='')
     @patch('hit_counter.services.Reader')
     def test_unconfigured_lookup_never_opens_database(self, reader):
-        self.assertEqual(location_for('192.0.2.1'), {'location_status': 'not_configured'})
+        self.config.geoip_path = ''
+        self.assertEqual(location_for('192.0.2.1', self.config), {'location_status': 'not_configured'})
         reader.assert_not_called()

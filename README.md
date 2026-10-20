@@ -111,16 +111,22 @@ a form description does not execute it.
 
 ## Configuration
 
-Set environment variables **before** Django loads settings (for PythonAnywhere,
-in the WSGI configuration before `get_wsgi_application()`). These settings affect
-only the counter.
+Configure the counter in Django admin under **Hit counter → Counter settings**
+(`/admin/hit_counter/countersettings/`). There is a single settings record;
+changes take effect on the next request without reloading the web app.
+Each field is validated when you save. Until you first save the record, the
+defaults below apply.
 
-| Environment variable | Default | Purpose |
+| Admin field | Default | Purpose |
 | --- | --- | --- |
-| `HIT_COUNTER_ALLOWED_ORIGINS` | `https://9trees.github.io` | Comma-separated exact browser origins, without paths or trailing slashes |
-| `HIT_COUNTER_TIME_ZONE` | `UTC` | IANA timezone for daily counts, e.g. `Asia/Kolkata` |
-| `HIT_COUNTER_GEOIP_PATH` | empty | Absolute filename of a local GeoLite2 City `.mmdb` database |
-| `HIT_COUNTER_TRUSTED_PROXY_IPS` | empty | Comma-separated immediate proxy IPs allowed to provide forwarded client IPs |
+| Allowed origins | `https://9trees.github.io` | One exact browser origin per line, without paths or trailing slashes |
+| Time zone | `UTC` | IANA timezone for daily counts, e.g. `Asia/Kolkata` |
+| Trusted proxy IPs | empty | One immediate proxy IP per line allowed to provide forwarded client IPs |
+| GeoIP database path | empty | Absolute filename of a local GeoLite2 City `.mmdb` database on the server |
+
+Only admin users with permission to change counter settings can edit them.
+Django core settings such as `DJANGO_SECRET_KEY` and `DJANGO_DEBUG` still use
+environment variables; they are needed before the database can be read.
 
 An origin covers an entire host, e.g. `https://9trees.github.io`, not an
 individual repository path. Include your custom domain or form host separately.
@@ -153,7 +159,7 @@ do not enable this option blindly or trust arbitrary addresses.
 
 Obtain a GeoLite2 **City** database from MaxMind under its applicable account,
 license, and attribution terms. Upload it outside publicly served/static folders
-and set `HIT_COUNTER_GEOIP_PATH` to its full filename. Keep it updated separately.
+and enter its full filename in **GeoIP database path**. Keep it updated separately.
 No visitor IPs are sent to an external geolocation service.
 
 Country, region and city are approximate IP-based locations, not GPS positions.
@@ -187,13 +193,14 @@ These changes do not automatically deploy or change your hosted app.
    python manage.py migrate
    ```
 
-3. Set counter environment variables in the WSGI configuration as described
-   above. For the existing deployment also set `DJANGO_DEBUG=False` and provide
-   a private `DJANGO_SECRET_KEY` rather than relying on development defaults.
-   Review the host's HTTPS/proxy setup before enabling production settings.
+3. For the existing deployment, set `DJANGO_DEBUG=False` and a private
+   `DJANGO_SECRET_KEY` in the WSGI configuration rather than relying on
+   development defaults. Review the host's HTTPS/proxy setup before enabling
+   production settings.
 4. If needed, create an admin login with `python manage.py createsuperuser`.
 5. Reload the app on PythonAnywhere's **Web** tab.
-6. Open `/admin/`, create your Page records, then embed the browser snippet.
+6. Open `/admin/`, review **Counter settings**, create your Page records, then
+   embed the browser snippet.
 7. From an allowed page's browser developer tools, verify a POST returns 201
    and increments both counters, and GET returns counts without incrementing.
    Check the stored client IP before trusting location results.
