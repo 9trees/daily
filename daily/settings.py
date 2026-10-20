@@ -37,6 +37,7 @@ CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_trusted.split(',') if o.strip()
 # Application definition
 
 INSTALLED_APPS = [
+    'hit_counter.apps.HitCounterConfig',
     'meal_planner.apps.MealPlannerConfig',
     'todo.apps.TodoConfig',
     'django_extensions',
@@ -130,6 +131,20 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Settings are scoped to the public counter; other apps keep their existing behavior.
+HIT_COUNTER_ALLOWED_ORIGINS = [
+    origin.strip() for origin in os.getenv(
+        'HIT_COUNTER_ALLOWED_ORIGINS', 'https://9trees.github.io'
+    ).split(',') if origin.strip()
+]
+HIT_COUNTER_TIME_ZONE = os.getenv('HIT_COUNTER_TIME_ZONE', 'UTC')
+HIT_COUNTER_GEOIP_PATH = os.getenv('HIT_COUNTER_GEOIP_PATH', '')
+# Trust forwarded IPs only from explicitly configured immediate proxies.
+HIT_COUNTER_TRUSTED_PROXY_IPS = [
+    ip.strip() for ip in os.getenv('HIT_COUNTER_TRUSTED_PROXY_IPS', '').split(',')
+    if ip.strip()
+]
 
 # Media and static
 # Allow overriding via environment; provide sensible defaults for local dev
