@@ -37,7 +37,7 @@ class SideDish(models.Model):
 class Meal(models.Model):
     id = models.AutoField(primary_key=True)
     date = models.DateField()
-    type = models.CharField(max_length=10, choices=[('Breakfast', 'Breakfast'), ('Lunch', 'Lunch'), ('Dinner', 'Dinner')])
+    type = models.CharField(max_length=10, choices=[('Breakfast', 'Breakfast'), ('Lunch', 'Lunch'), ('Snack', 'Snack'), ('Dinner', 'Dinner')])
     main_dish = models.ForeignKey(MainDish, on_delete=models.CASCADE, related_name='meals')
     side_dishes = models.ManyToManyField(SideDish, related_name='meals')
     tags = models.ManyToManyField(Tag, related_name='meals')
